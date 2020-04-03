@@ -1,5 +1,5 @@
 export type ReadConfig = {
-  reader: <T>(path: string) => Promise<T>;
+  reader?: <T>(path: string) => Promise<T>;
 };
 
 export type ReadResult<T> = {

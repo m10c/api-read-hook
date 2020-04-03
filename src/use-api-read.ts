@@ -1,23 +1,28 @@
-import * as React from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { ReadConfig, ReadResult } from './types';
+import { ApiReadContext } from './ApiReadConfig';
 
 export default function useApiRead<T>(
   path: string,
-  options: ReadConfig
+  options: ReadConfig = {}
 ): ReadResult<T> {
-  const { reader } = options;
+  const config = useContext(ApiReadContext);
+  const { reader } = { ...config, ...options };
 
-  const [data, setData] = React.useState<T | undefined>(undefined);
-  const [error, setError] = React.useState(undefined);
-  const [invalidateToken, setInvalidateToken] = React.useState(0);
+  const [data, setData] = useState<T | undefined>(undefined);
+  const [error, setError] = useState(undefined);
+  const [invalidateToken, setInvalidateToken] = useState(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
     async function readRequest() {
       setData(undefined);
       setError(undefined);
 
       if (!reader) {
-        throw new Error('A `reader` function must be provided to `useApiRead`');
+        throw new Error(
+          'A `reader` function must be provided to `useApiRead`, either ' +
+            'directly or via ApiReadConfig'
+        );
       }
 
       try {

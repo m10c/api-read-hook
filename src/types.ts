@@ -6,4 +6,5 @@ export type ReadResult<T> = {
   data: T | undefined;
   error: Error | undefined;
   invalidate: () => void;
+  invalidateMatching: (search: string | RegExp) => void;
 };

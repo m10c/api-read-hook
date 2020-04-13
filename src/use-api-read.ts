@@ -1,17 +1,27 @@
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
+
+import { ApiReadContext } from './ApiReadContext';
 import { ReadConfig, ReadResult } from './types';
-import { ApiReadContext } from './ApiReadConfig';
 
 export default function useApiRead<T>(
   path: string,
   options: ReadConfig = {}
 ): ReadResult<T> {
-  const config = useContext(ApiReadContext);
-  const { reader } = { ...config, ...options };
+  const context = useContext(ApiReadContext);
+  const { reader } = { ...context.config, ...options };
 
   const [data, setData] = useState<T | undefined>(undefined);
   const [error, setError] = useState(undefined);
   const [invalidateToken, setInvalidateToken] = useState(0);
+  const invalidate = () => setInvalidateToken(Math.random());
+
+  const { current: instanceKey } = useRef(Math.random().toString());
+  useEffect(() => {
+    context.addInvalidationEntry(instanceKey, path, invalidate);
+    return () => {
+      context.removeInvalidationEntry(instanceKey);
+    };
+  }, [context, instanceKey, path]);
 
   useEffect(() => {
     async function readRequest() {
@@ -34,7 +44,10 @@ export default function useApiRead<T>(
     readRequest();
   }, [reader, path, invalidateToken]);
 
-  const invalidate = () => setInvalidateToken(Math.random());
-
-  return { data, error, invalidate };
+  return {
+    data,
+    error,
+    invalidate,
+    invalidateMatching: context.invalidateMatching,
+  };
 }

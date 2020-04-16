@@ -4,7 +4,7 @@ import { ApiReadContext } from './ApiReadContext';
 import { ReadConfig, ReadResult } from './types';
 
 export default function useApiRead<T>(
-  path: string,
+  path: string | null,
   options: ReadConfig = {}
 ): ReadResult<T> {
   const context = useContext(ApiReadContext);
@@ -17,6 +17,7 @@ export default function useApiRead<T>(
 
   const { current: instanceKey } = useRef(Math.random().toString());
   useEffect(() => {
+    if (path === null) return;
     context.addInvalidationEntry(instanceKey, path, invalidate);
     return () => {
       context.removeInvalidationEntry(instanceKey);
@@ -34,6 +35,10 @@ export default function useApiRead<T>(
             'directly or via ApiReadConfig'
         );
       }
+
+      // Intentionally bail out, to allow user to e.g. wait on result from a
+      // prior API request
+      if (path === null) return;
 
       try {
         setData(await reader<T>(path));

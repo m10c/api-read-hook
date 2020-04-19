@@ -12,8 +12,12 @@ export default function useApiRead<T>(
 
   const [data, setData] = useState<T | undefined>(undefined);
   const [error, setError] = useState(undefined);
+
   const [invalidateToken, setInvalidateToken] = useState(0);
   const invalidate = () => setInvalidateToken(Math.random());
+
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [moreError, setMoreError] = useState<Error | undefined>(undefined);
 
   const { current: instanceKey } = useRef(Math.random().toString());
   useEffect(() => {
@@ -49,10 +53,36 @@ export default function useApiRead<T>(
     readRequest();
   }, [reader, path, invalidateToken]);
 
+  async function readMore(morePath: string, updater: (moreData: T) => T) {
+    if (loadingMore) return;
+
+    setLoadingMore(true);
+    setMoreError(undefined);
+
+    if (!reader) {
+      throw new Error(
+        'A `reader` function must be provided to `useApiRead`, either ' +
+          'directly or via ApiReadConfig'
+      );
+    }
+
+    try {
+      const nextData = await reader<T>(morePath);
+      setData(updater(nextData));
+      setLoadingMore(false);
+    } catch (err) {
+      setMoreError(err);
+      setLoadingMore(false);
+    }
+  }
+
   return {
     data,
     error,
     invalidate,
     invalidateMatching: context.invalidateMatching,
+    readMore,
+    loadingMore,
+    moreError,
   };
 }

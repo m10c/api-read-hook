@@ -7,4 +7,7 @@ export type ReadResult<T> = {
   error: Error | undefined;
   invalidate: () => void;
   invalidateMatching: (search: string | RegExp) => void;
+  readMore: (path: string, updater: (moreData: T) => T) => void;
+  loadingMore: boolean;
+  moreError: Error | undefined;
 };

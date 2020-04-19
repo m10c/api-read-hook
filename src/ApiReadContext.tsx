@@ -26,29 +26,34 @@ type Props = {
 };
 
 export function ApiReadProvider({ config, children }: Props) {
-  const { current: invalidationEntries } = React.useRef<InvalidationEntries>(
-    {}
-  );
+  const invalidationEntriesRef = React.useRef<InvalidationEntries>({});
 
-  function addInvalidationEntry(
+  const addInvalidationEntry = React.useCallback(function addInvalidationEntry(
     key: string,
     path: string,
     invalidate: () => void
   ): void {
-    invalidationEntries[key] = [path, invalidate];
-  }
+    invalidationEntriesRef.current[key] = [path, invalidate];
+  },
+  []);
 
-  function removeInvalidationEntry(key: string): void {
-    delete invalidationEntries[key];
-  }
+  const removeInvalidationEntry = React.useCallback(
+    function removeInvalidationEntry(key: string): void {
+      delete invalidationEntriesRef.current[key];
+    },
+    []
+  );
 
-  function invalidateMatching(search: string | RegExp): void {
-    for (const entry of Object.values(invalidationEntries)) {
+  const invalidateMatching = React.useCallback(function invalidateMatching(
+    search: string | RegExp
+  ): void {
+    for (const entry of Object.values(invalidationEntriesRef.current)) {
       if (entry[0].match(search)) {
         entry[1]();
       }
     }
-  }
+  },
+  []);
 
   return (
     <ApiReadContext.Provider

@@ -1,25 +1,37 @@
-import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+} from 'react';
 
 import { ApiReadContext } from './ApiReadContext';
 import { ReadConfig, ReadResult } from './types';
+import reducer, { ReaderReducer } from './core/reducer';
+import useConfig from './core/use-config';
+import useReadMore from './core/use-read-more';
 
 export default function useApiRead<T>(
   path: string | null,
   options: ReadConfig = {}
 ): ReadResult<T> {
   const context = useContext(ApiReadContext);
-  const { reader } = { ...context.config, ...options };
 
-  const [data, setData] = useState<T | undefined>(undefined);
-  const [error, setError] = useState<Error | undefined>(undefined);
+  const config = useConfig(options);
+  const { reader } = config;
+
+  const [state, dispatch] = useReducer<ReaderReducer<T>>(reducer, {
+    data: undefined,
+    error: undefined,
+    staleReason: null,
+  });
 
   const [invalidateToken, setInvalidateToken] = useState(0);
   const invalidate = useCallback(function invalidate() {
     setInvalidateToken(Math.random());
   }, []);
-
-  const [loadingMore, setLoadingMore] = useState<boolean>(false);
-  const [moreError, setMoreError] = useState<Error | undefined>(undefined);
 
   const { current: instanceKey } = useRef(Math.random().toString());
   useEffect(() => {
@@ -34,8 +46,7 @@ export default function useApiRead<T>(
     let ignore = false;
 
     async function readRequest() {
-      setData(undefined);
-      setError(undefined);
+      dispatch({ type: 'READ_REQUEST', payload: { config } });
 
       // Intentionally bail out, to allow user to e.g. wait on result from a
       // prior API request
@@ -49,10 +60,14 @@ export default function useApiRead<T>(
       }
 
       try {
-        const d = await reader<T>(path);
-        if (!ignore) setData(d);
-      } catch (err) {
-        if (!ignore) setError(err);
+        const data = await reader<T>(path);
+        if (!ignore) {
+          dispatch({ type: 'READ_SUCCESS', payload: { config, data } });
+        }
+      } catch (error) {
+        if (!ignore) {
+          dispatch({ type: 'READ_FAILURE', payload: { config, error } });
+        }
       }
     }
     readRequest();
@@ -60,37 +75,15 @@ export default function useApiRead<T>(
     return () => {
       ignore = true;
     };
-  }, [reader, path, invalidateToken]);
+  }, [path, reader, config, invalidateToken]);
 
-  const readMore = useCallback(
-    async function readMore(morePath: string, updater: (moreData: T) => T) {
-      if (loadingMore) return;
-
-      setLoadingMore(true);
-      setMoreError(undefined);
-
-      if (!reader) {
-        throw new Error(
-          'A `reader` function must be provided to `useApiRead`, either ' +
-            'directly or via ApiReadConfig'
-        );
-      }
-
-      try {
-        const nextData = await reader<T>(morePath);
-        setData(updater(nextData));
-        setLoadingMore(false);
-      } catch (err) {
-        setMoreError(err);
-        setLoadingMore(false);
-      }
-    },
-    [loadingMore, reader]
-  );
+  const { readMore, loadingMore, moreError } = useReadMore(reader, dispatch);
 
   return {
-    data,
-    error,
+    data: state.data,
+    error: state.error,
+    stale: Boolean(state.staleReason),
+    staleReason: state.staleReason,
     invalidate,
     invalidateMatching: context.invalidateMatching,
     readMore,

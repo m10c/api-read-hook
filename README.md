@@ -18,8 +18,10 @@ Hook-based library for simple yet flexible data fetching and display in React ap
   including easy typing of expected responses
   (Flow support coming soon).
 - Supports chaining API multiple dependent API requests.
-- **TODO**: Opt-in fine-grained control of a response cache,
+- Opt-in fine-grained control of a response cache,
   with clear identification of stale responses.
+- **TODO**: A global cache,
+  which can persist across screen unmounts.
 
 ## Installation
 

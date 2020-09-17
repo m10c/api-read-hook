@@ -9,6 +9,6 @@ import { ApiReadContext } from './ApiReadContext';
  * mutating).
  */
 export default function useInvalidation() {
-  const { invalidateMatching } = useContext(ApiReadContext);
-  return { invalidateMatching };
+  const { invalidateExact, invalidateMatching } = useContext(ApiReadContext);
+  return { invalidateExact, invalidateMatching };
 }

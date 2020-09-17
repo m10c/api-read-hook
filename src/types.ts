@@ -17,6 +17,7 @@ export type ReadResult<T> = {
   stale: boolean;
   staleReason: null | StaleReason;
   invalidate: () => void;
+  invalidateExact: (search: string) => void;
   invalidateMatching: (search: string | RegExp) => void;
   readMore: (path: string, updater: (moreData: T) => T) => void;
   loadingMore: boolean;

@@ -88,6 +88,7 @@ export default function useApiRead<T>(
     stale: Boolean(state.staleReason),
     staleReason: state.staleReason,
     invalidate,
+    invalidateExact: context.invalidateExact,
     invalidateMatching: context.invalidateMatching,
     readMore,
     loadingMore,

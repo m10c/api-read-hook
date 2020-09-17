@@ -12,11 +12,13 @@ export const ApiReadContext = React.createContext<{
     invalidate: () => void
   ) => void;
   removeInvalidationEntry: (key: string) => void;
+  invalidateExact: (search: string) => void;
   invalidateMatching: (search: string | RegExp) => void;
 }>({
   config: {},
   addInvalidationEntry: () => {},
   removeInvalidationEntry: () => {},
+  invalidateExact: () => {},
   invalidateMatching: () => {},
 });
 
@@ -44,6 +46,17 @@ export function ApiReadProvider({ config, children }: Props) {
     []
   );
 
+  const invalidateExact = React.useCallback(function invalidatExact(
+    search: string
+  ): void {
+    for (const entry of Object.values(invalidationEntriesRef.current)) {
+      if (entry[0] === search) {
+        entry[1]();
+      }
+    }
+  },
+  []);
+
   const invalidateMatching = React.useCallback(function invalidateMatching(
     search: string | RegExp
   ): void {
@@ -61,6 +74,7 @@ export function ApiReadProvider({ config, children }: Props) {
         config,
         addInvalidationEntry,
         removeInvalidationEntry,
+        invalidateExact,
         invalidateMatching,
       }}
     >

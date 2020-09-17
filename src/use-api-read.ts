@@ -11,6 +11,7 @@ import { ApiReadContext } from './ApiReadContext';
 import { ReadConfig, ReadResult } from './types';
 import reducer, { ReaderReducer } from './core/reducer';
 import useConfig from './core/use-config';
+import usePrevious from './core/use-previous';
 import useReadMore from './core/use-read-more';
 
 export default function useApiRead<T>(
@@ -42,11 +43,13 @@ export default function useApiRead<T>(
     };
   }, [context, instanceKey, path, invalidate]);
 
+  const previousPath = usePrevious(path);
   useEffect(() => {
     let ignore = false;
 
     async function readRequest() {
-      dispatch({ type: 'READ_REQUEST', payload: { config } });
+      const pathChanged = previousPath !== path;
+      dispatch({ type: 'READ_REQUEST', payload: { config, pathChanged } });
 
       // Intentionally bail out, to allow user to e.g. wait on result from a
       // prior API request
@@ -75,7 +78,7 @@ export default function useApiRead<T>(
     return () => {
       ignore = true;
     };
-  }, [path, reader, config, invalidateToken]);
+  }, [path, previousPath, reader, config, invalidateToken]);
 
   const { readMore, loadingMore, moreError } = useReadMore(reader, dispatch);
 

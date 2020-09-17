@@ -8,7 +8,10 @@ type State<T> = {
 };
 
 type Action<T> =
-  | { type: 'READ_REQUEST'; payload: { config: ReadConfig } }
+  | {
+      type: 'READ_REQUEST';
+      payload: { config: ReadConfig; pathChanged: boolean };
+    }
   | { type: 'READ_SUCCESS'; payload: { data: T; config: ReadConfig } }
   | { type: 'READ_FAILURE'; payload: { error: Error; config: ReadConfig } }
   | { type: 'MORE_DATA'; payload: { data: T } };
@@ -22,15 +25,14 @@ export default function reducer<T>(
 ): State<T> {
   switch (action.type) {
     case 'READ_REQUEST':
+      const allowStale =
+        action.payload.config.staleWhenInvalidated &&
+        !action.payload.pathChanged;
       return {
         error: undefined,
-        data: action.payload.config.staleWhenInvalidated
-          ? state.data
-          : undefined,
+        data: allowStale ? state.data : undefined,
         staleReason:
-          action.payload.config.staleWhenInvalidated && state.data !== undefined
-            ? 'invalidated'
-            : null,
+          allowStale && state.data !== undefined ? 'invalidated' : null,
       };
     case 'READ_SUCCESS':
       return {

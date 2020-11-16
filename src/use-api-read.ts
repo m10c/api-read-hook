@@ -78,7 +78,9 @@ export default function useApiRead<T>(
     return () => {
       ignore = true;
     };
-  }, [path, previousPath, reader, config, invalidateToken]);
+    // intentionally omitting previousPath
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [path, reader, config, invalidateToken]);
 
   const { readMore, loadingMore, moreError } = useReadMore(reader, dispatch);
 

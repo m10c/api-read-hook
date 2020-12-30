@@ -12,14 +12,14 @@ Hook-based library for simple yet flexible data fetching and display in React ap
 - Predictable default mode of operation:
   fresh data is always fetched when the component first mounts.
 - Pagination support (flexible enough for any server mechanism).
-- Manual invalidation controls to wipe out stale responses across all components.
+- Manual invalidation controls to wipe out stale responses across all components, including automatic time-based invalidation.
 - Configurable per-instance or via React context.
 - Full type-safety with TypeScript,
   including easy typing of expected responses
   (Flow support coming soon).
 - Supports chaining API multiple dependent API requests.
 - Opt-in fine-grained control of a response cache,
-  with clear identification of stale responses.
+  with clear identification of stale responses and their age.
 - **TODO**: A global cache,
   which can persist across screen unmounts.
 

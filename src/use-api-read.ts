@@ -3,7 +3,6 @@ import {
   useContext,
   useEffect,
   useReducer,
-  useRef,
   useState,
 } from 'react';
 
@@ -21,12 +20,13 @@ export default function useApiRead<T>(
   const context = useContext(ApiReadContext);
 
   const config = useConfig(options);
-  const { reader } = config;
+  const { reader, invalidateAge } = config;
 
   const [state, dispatch] = useReducer<ReaderReducer<T>>(reducer, {
     data: undefined,
     error: undefined,
     staleReason: null,
+    fetchedAt: null,
   });
 
   const [invalidateToken, setInvalidateToken] = useState(0);
@@ -34,7 +34,8 @@ export default function useApiRead<T>(
     setInvalidateToken(Math.random());
   }, []);
 
-  const { current: instanceKey } = useRef(Math.random().toString());
+  // Effect: Add/remove this instance from the global cache enties
+  const [instanceKey] = useState(Math.random().toString());
   useEffect(() => {
     if (path === null) return;
     context.addInvalidationEntry(instanceKey, path, invalidate);
@@ -43,6 +44,7 @@ export default function useApiRead<T>(
     };
   }, [context, instanceKey, path, invalidate]);
 
+  // Effect: Perform the API request
   const previousPath = usePrevious(path);
   useEffect(() => {
     let ignore = false;
@@ -65,7 +67,10 @@ export default function useApiRead<T>(
       try {
         const data = await reader<T>(path);
         if (!ignore) {
-          dispatch({ type: 'READ_SUCCESS', payload: { config, data } });
+          dispatch({
+            type: 'READ_SUCCESS',
+            payload: { config, data, fetchedAt: Math.floor(Date.now() / 1000) },
+          });
         }
       } catch (error) {
         if (!ignore) {
@@ -82,6 +87,16 @@ export default function useApiRead<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path, reader, config, invalidateToken]);
 
+  // Effect: Manage invalidateAge timeout
+  useEffect(() => {
+    if (!invalidateAge || !state.data || state.staleReason) return;
+
+    const timeoutId = setTimeout(() => {
+      invalidate();
+    }, invalidateAge * 1000);
+    return () => clearTimeout(timeoutId);
+  }, [invalidateAge, state.data, state.staleReason, invalidate]);
+
   const { readMore, loadingMore, moreError } = useReadMore(reader, dispatch);
 
   return {
@@ -89,6 +104,7 @@ export default function useApiRead<T>(
     error: state.error,
     stale: Boolean(state.staleReason),
     staleReason: state.staleReason,
+    fetchedAt: state.fetchedAt,
     invalidate,
     invalidateExact: context.invalidateExact,
     invalidateMatching: context.invalidateMatching,

@@ -5,6 +5,7 @@ type State<T> = {
   data: T | undefined;
   error: Error | undefined;
   staleReason: null | StaleReason;
+  fetchedAt: null | number;
 };
 
 type Action<T> =
@@ -12,7 +13,10 @@ type Action<T> =
       type: 'READ_REQUEST';
       payload: { config: ReadConfig; pathChanged: boolean };
     }
-  | { type: 'READ_SUCCESS'; payload: { data: T; config: ReadConfig } }
+  | {
+      type: 'READ_SUCCESS';
+      payload: { data: T; fetchedAt: number; config: ReadConfig };
+    }
   | { type: 'READ_FAILURE'; payload: { error: Error; config: ReadConfig } }
   | { type: 'MORE_DATA'; payload: { data: T } };
 
@@ -24,31 +28,35 @@ export default function reducer<T>(
   action: Action<T>
 ): State<T> {
   switch (action.type) {
-    case 'READ_REQUEST':
+    case 'READ_REQUEST': {
       const allowStale =
         action.payload.config.staleWhenInvalidated &&
         !action.payload.pathChanged;
+      const preservingStale = allowStale && state.data !== undefined;
       return {
         error: undefined,
         data: allowStale ? state.data : undefined,
-        staleReason:
-          allowStale && state.data !== undefined ? 'invalidated' : null,
+        staleReason: preservingStale ? 'invalidated' : null,
+        fetchedAt: preservingStale ? state.fetchedAt : null,
       };
+    }
     case 'READ_SUCCESS':
       return {
         data: action.payload.data,
         error: undefined,
         staleReason: null,
+        fetchedAt: action.payload.fetchedAt,
       };
-    case 'READ_FAILURE':
+    case 'READ_FAILURE': {
+      const allowStale = action.payload.config.staleWhenError;
+      const preservingStale = allowStale && state.data !== undefined;
       return {
         error: action.payload.error,
-        data: action.payload.config.staleWhenError ? state.data : undefined,
-        staleReason:
-          action.payload.config.staleWhenInvalidated && state.data !== undefined
-            ? 'invalidated'
-            : null,
+        data: allowStale ? state.data : undefined,
+        staleReason: preservingStale ? 'invalidated' : null,
+        fetchedAt: preservingStale ? state.fetchedAt : null,
       };
+    }
     case 'MORE_DATA':
       return {
         // TODO: Needs more thought about interactions with rest of state

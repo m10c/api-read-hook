@@ -1,0 +1,43 @@
+// @flow
+
+type Reader = <T>(path: string) => Promise<T>;
+
+export type ReadConfig = {
+  reader?: Reader,
+
+  staleWhileInvalidated?: boolean,
+  staleWhileError?: boolean,
+
+  invalidateAge?: number,
+};
+
+type StaleReason = 'invalidated' | 'error';
+
+export type ReadResult<T> = {
+  data: T | void,
+  error: Error | void,
+  stale: boolean,
+  staleReason: null | StaleReason,
+  receivedAt: null | number,
+  invalidate: () => void,
+  invalidateExact: (search: string) => void,
+  invalidateMatching: (search: string | RegExp) => void,
+  readMore: (path: string, updater: (moreData: T) => T) => void,
+  loadingMore: boolean,
+  moreError: Error | void,
+};
+
+declare export class ApiReadProvider extends React$Component<{
+  config: ReadConfig,
+  children: React.Node,
+}> {}
+
+declare export function useApiRead<T>(
+  path: string | null,
+  options?: ReadConfig
+): ReadResult<T>;
+
+declare export function useInvalidation(): {
+  invalidateExact: (search: string) => void,
+  invalidateMatching: (search: string | RegExp) => void,
+};

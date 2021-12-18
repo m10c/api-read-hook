@@ -5,7 +5,7 @@ type State<T> = {
   data: T | undefined;
   error: Error | undefined;
   staleReason: null | StaleReason;
-  fetchedAt: null | number;
+  receivedAt: null | number;
 };
 
 type Action<T> =
@@ -15,7 +15,7 @@ type Action<T> =
     }
   | {
       type: 'READ_SUCCESS';
-      payload: { data: T; fetchedAt: number; config: ReadConfig };
+      payload: { data: T; receivedAt: number; config: ReadConfig };
     }
   | { type: 'READ_FAILURE'; payload: { error: Error; config: ReadConfig } }
   | { type: 'MORE_DATA'; payload: { data: T } };
@@ -30,14 +30,14 @@ export default function reducer<T>(
   switch (action.type) {
     case 'READ_REQUEST': {
       const allowStale =
-        action.payload.config.staleWhenInvalidated &&
+        action.payload.config.staleWhileInvalidated &&
         !action.payload.pathChanged;
       const preservingStale = allowStale && state.data !== undefined;
       return {
         error: undefined,
         data: allowStale ? state.data : undefined,
         staleReason: preservingStale ? 'invalidated' : null,
-        fetchedAt: preservingStale ? state.fetchedAt : null,
+        receivedAt: preservingStale ? state.receivedAt : null,
       };
     }
     case 'READ_SUCCESS':
@@ -45,16 +45,16 @@ export default function reducer<T>(
         data: action.payload.data,
         error: undefined,
         staleReason: null,
-        fetchedAt: action.payload.fetchedAt,
+        receivedAt: action.payload.receivedAt,
       };
     case 'READ_FAILURE': {
-      const allowStale = action.payload.config.staleWhenError;
+      const allowStale = action.payload.config.staleWhileError;
       const preservingStale = allowStale && state.data !== undefined;
       return {
         error: action.payload.error,
         data: allowStale ? state.data : undefined,
         staleReason: preservingStale ? 'invalidated' : null,
-        fetchedAt: preservingStale ? state.fetchedAt : null,
+        receivedAt: preservingStale ? state.receivedAt : null,
       };
     }
     case 'MORE_DATA':

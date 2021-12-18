@@ -26,7 +26,7 @@ export default function useApiRead<T>(
     data: undefined,
     error: undefined,
     staleReason: null,
-    fetchedAt: null,
+    receivedAt: null,
   });
 
   const [invalidateToken, setInvalidateToken] = useState(0);
@@ -69,7 +69,11 @@ export default function useApiRead<T>(
         if (!ignore) {
           dispatch({
             type: 'READ_SUCCESS',
-            payload: { config, data, fetchedAt: Math.floor(Date.now() / 1000) },
+            payload: {
+              config,
+              data,
+              receivedAt: Math.floor(Date.now() / 1000),
+            },
           });
         }
       } catch (error) {
@@ -104,7 +108,7 @@ export default function useApiRead<T>(
     error: state.error,
     stale: Boolean(state.staleReason),
     staleReason: state.staleReason,
-    fetchedAt: state.fetchedAt,
+    receivedAt: state.receivedAt,
     invalidate,
     invalidateExact: context.invalidateExact,
     invalidateMatching: context.invalidateMatching,

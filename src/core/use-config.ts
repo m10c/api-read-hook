@@ -11,19 +11,20 @@ export default function useConfig(options: ReadConfig = {}): ReadConfig {
   const config = useMemo(
     () => ({
       reader: options.reader ?? context.config.reader,
-      staleWhenError: options.staleWhenError ?? context.config.staleWhenError,
-      staleWhenInvalidated:
-        options.staleWhenInvalidated ?? context.config.staleWhenInvalidated,
+      staleWhileError:
+        options.staleWhileError ?? context.config.staleWhileError,
+      staleWhileInvalidated:
+        options.staleWhileInvalidated ?? context.config.staleWhileInvalidated,
       invalidateAge: options.invalidateAge ?? context.config.invalidateAge,
     }),
     [
       context.config.reader,
-      context.config.staleWhenError,
-      context.config.staleWhenInvalidated,
+      context.config.staleWhileError,
+      context.config.staleWhileInvalidated,
       context.config.invalidateAge,
       options.reader,
-      options.staleWhenError,
-      options.staleWhenInvalidated,
+      options.staleWhileError,
+      options.staleWhileInvalidated,
       options.invalidateAge,
     ]
   );

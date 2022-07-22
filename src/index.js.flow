@@ -29,7 +29,7 @@ export type ReadResult<T> = {
 
 declare export class ApiReadProvider extends React$Component<{
   config: ReadConfig,
-  children: React.Node,
+  children: React$Node,
 }> {}
 
 declare export function useApiRead<T>(

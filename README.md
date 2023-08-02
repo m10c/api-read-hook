@@ -70,6 +70,33 @@ function HomeScreen() {
 }
 ```
 
+## Rationale
+
+### Compared with SWR
+
+SWR is designed around (and even named after)
+the model of stale data being shown to the user by defualt,
+while new data fetches in the background.
+
+In our view,
+this isn't desirable behaviour in the vast majority of cases for dynamic apps
+(particularly when considering React Native).
+
+api-read-hook uses a simpler and more predictable model by default,
+where when a screen mounts,
+it always fetches fresh data,
+and the user sees a loading state.
+
+This is in our opinion more intuitive for the user,
+as they can trust they're seeing the latest data every time they open a new screen,
+not worry the app may be opaquely digging up outdated stale data.
+
+3 years after this library was created based on this justification,
+the situation seems unchanged.
+Vercel (SWR maintainers) are stil pushing ahead with their vision that data should be stale by default,
+despite much pushback:
+https://github.com/vercel/next.js/issues/42991#issuecomment-1569986363
+
 ## API reference
 
 ### `reader` function

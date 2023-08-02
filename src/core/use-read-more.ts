@@ -28,7 +28,7 @@ export default function useReadMore<T>(
         dispatch({ type: 'MORE_DATA', payload: { data: updater(nextData) } });
         setLoadingMore(false);
       } catch (err) {
-        setMoreError(err);
+        setMoreError(err as any);
         setLoadingMore(false);
       }
     },

@@ -22,6 +22,7 @@ export type ReadResult<T> = {
   invalidate: () => void;
   invalidateExact: (search: string) => void;
   invalidateMatching: (search: string | RegExp) => void;
+  mutate: (mutator: (data: T) => T) => void;
   readMore: (path: string, updater: (moreData: T) => T) => void;
   loadingMore: boolean;
   moreError: Error | undefined;

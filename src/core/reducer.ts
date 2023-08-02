@@ -18,7 +18,8 @@ type Action<T> =
       payload: { data: T; receivedAt: number; config: ReadConfig };
     }
   | { type: 'READ_FAILURE'; payload: { error: Error; config: ReadConfig } }
-  | { type: 'MORE_DATA'; payload: { data: T } };
+  | { type: 'MORE_DATA'; payload: { data: T } }
+  | { type: 'MUTATED_DATA'; payload: { data: T } };
 
 export type ReaderReducer<T> = Reducer<State<T>, Action<T>>;
 export type ReaderDispatch<T> = Dispatch<ReducerAction<ReaderReducer<T>>>;
@@ -60,6 +61,11 @@ export default function reducer<T>(
     case 'MORE_DATA':
       return {
         // TODO: Needs more thought about interactions with rest of state
+        ...state,
+        data: action.payload.data,
+      };
+    case 'MUTATED_DATA':
+      return {
         ...state,
         data: action.payload.data,
       };

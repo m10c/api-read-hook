@@ -34,15 +34,24 @@ export default function useApiRead<T>(
     setInvalidateToken(Math.random());
   }, []);
 
+  const mutate = useCallback(
+    function mutate(mutator: (data: T) => T) {
+      if (!state.data) return;
+      const mutatedData = mutator(state.data);
+      dispatch({ type: 'MUTATED_DATA', payload: { data: mutatedData } });
+    },
+    [state.data]
+  );
+
   // Effect: Add/remove this instance from the global cache enties
   const [instanceKey] = useState(Math.random().toString());
   useEffect(() => {
     if (path === null) return;
-    context.addInvalidationEntry(instanceKey, path, invalidate);
+    context.addMountedEntry(instanceKey, path, invalidate, mutate);
     return () => {
-      context.removeInvalidationEntry(instanceKey);
+      context.removeMountedEntry(instanceKey);
     };
-  }, [context, instanceKey, path, invalidate]);
+  }, [context, instanceKey, path, invalidate, mutate]);
 
   // Effect: Perform the API request
   const previousPath = usePrevious(path);
@@ -78,7 +87,10 @@ export default function useApiRead<T>(
         }
       } catch (error) {
         if (!ignore) {
-          dispatch({ type: 'READ_FAILURE', payload: { config, error } });
+          dispatch({
+            type: 'READ_FAILURE',
+            payload: { config, error: error as any },
+          });
         }
       }
     }
@@ -112,6 +124,7 @@ export default function useApiRead<T>(
     invalidate,
     invalidateExact: context.invalidateExact,
     invalidateMatching: context.invalidateMatching,
+    mutate,
     readMore,
     loadingMore,
     moreError,

@@ -20,7 +20,13 @@ export type ReadResult<T> = {
   staleReason: null | StaleReason;
   receivedAt: null | number;
   invalidate: () => void;
+  /**
+   * @deprecated Access from `useInvalidation` hook, as this has no relevance to the ReadResult
+   */
   invalidateExact: (search: string) => void;
+  /**
+   * @deprecated Access from `useInvalidation` hook, as this has no relevance to the ReadResult
+   */
   invalidateMatching: (search: string | RegExp) => void;
   mutate: (mutator: (data: T) => T) => void;
   readMore: (path: string, updater: (moreData: T) => T) => void;

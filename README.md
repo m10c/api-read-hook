@@ -11,6 +11,7 @@ Hook-based library for simple yet flexible data fetching and display in React ap
   fresh data is always fetched when the component first mounts.
 - Pagination support (flexible enough for any server mechanism).
 - Manual invalidation controls to wipe out stale responses across all components, including automatic time-based invalidation.
+- Manual mutation controls to update responses across mounted components.
 - Configurable per-instance or via React context.
 - Full type-safety with TypeScript or Flow,
   including easy typing of expected responses.

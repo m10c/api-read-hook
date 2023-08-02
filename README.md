@@ -201,8 +201,8 @@ the `useInvalidation` hook can be used to retrieve helper functions for invalida
 
 Works in a similar way to `useInvalidation`, but for mutation:
 
-- **`invalidateExact`**: `(search: string, mutator: <T>(data: T) => T) => void`
-- **`invalidateMatching`**: `(search: string | RegExp, mutator: <T>(data: T) => T) => void`
+- **`mutateExact`**: `(search: string, mutator: <T>(data: T) => T) => void`
+- **`mutateMatching`**: `(search: string | RegExp, mutator: <T>(data: T) => T) => void`
 
 ## Examples
 

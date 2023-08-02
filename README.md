@@ -166,14 +166,28 @@ The following properties tell you about the data returned:
   a unix timestamp (seconds) of when the data was received
   (i.e. when the `reader` returned the data).
 
-The `ReadResult` also contains some functions which can be called to control invalidation of responses.
-`invalidate` works directly on the current response,
-while `invalidateExact` and `invalidateMatching` allow searching through all currently held responses;
-they are also available via the `useInvalidation` hook this library provides.
+The `ReadResult` also contains some functions which can be called to manipulate the current response:
 
 - **`invalidate`**: `() => void` -
   Call this when you know the current response is invalid and needs refetching
-  (e.g. because the user just saved a change to entity).
+  (e.g. because the user just saved a change to the entity,
+  and you want to re-fetch the authoritative state).
+- **`mutate`**: `(data: T) => T` -
+  Make a direct change to the response payload
+  (e.g. because the user just saved a change to the entity,
+  which was simple enough that you can apply it directly).
+
+Finally, `ReadResult` also contains some properties that can be used for pagination:
+
+- **`readMore`**: `(path: string, updater: (moreData: T) => T) => void`
+- **`loadingMore`**: `boolean`
+- **`moreError`**: `Error` | `undefined`
+
+### `useInvalidation` hook
+
+Within any component,
+the `useInvalidation` hook can be used to retrieve helper functions for invalidating responses in other components:
+
 - **`invalidateExact`**: `(search: string) => void` -
   Searches through all currently held responses
   (i.e. any mounted hooks current displaying a response),
@@ -183,12 +197,12 @@ they are also available via the `useInvalidation` hook this library provides.
   and invalidates those where:
   - `search` is a `string`: `path` **contains** `search`.
   - `search` is a `RegExp`: `path` matches the `search` regexp.
+### `useMutation` hook
 
-Finally, `ReadResult` also contains some properties that can be used for pagination:
+Works in a similar way to `useInvalidation`, but for mutation:
 
-- **`readMore`**: `(path: string, updater: (moreData: T) => T) => void`
-- **`loadingMore`**: `boolean`
-- **`moreError`**: `Error` | `undefined`
+- **`invalidateExact`**: `(search: string, mutator: <T>(data: T) => T) => void`
+- **`invalidateMatching`**: `(search: string | RegExp, mutator: <T>(data: T) => T) => void`
 
 ## Examples
 

@@ -18,8 +18,8 @@ Hook-based library for simple yet flexible data fetching and display in React ap
 - Supports chaining API multiple dependent API requests.
 - Opt-in fine-grained control of a response cache,
   with clear identification of stale responses and their age.
-- **TODO**: A global cache,
-  which can persist across screen unmounts.
+- Opt-in global cache,
+  which persists responses across screen unmounts.
 
 ## Installation
 
@@ -124,10 +124,24 @@ or in the top level `ApiReadProvider` `config` prop to set the defaults for all 
 
 - **`reader`**: `(path: string) => Promise<mixed>` -
   A reader function for your app's API, as described above.
+- **`staleWhileMounted?`**: `boolean` -
+  If `true`, responses are kept in a global cache owned by the `ApiReadProvider`,
+  and a hook mounting on a path which is already in the cache
+  immediately returns the cached response (marked stale, with a `staleReason` of `'mounted'`)
+  while the fresh response is fetched in the background.
+  This avoids a loading state when the user returns to a screen they've already visited.
+  Cached responses are dropped when the path is invalidated,
+  and updated in place when the path is mutated,
+  so an unmounted screen can't be brought back with data you've already replaced.
+  Note that this option has no effect without an `ApiReadProvider`, which owns the cache.
+  The cache currently has no eviction policy:
+  it holds one entry per path read for the lifetime of the provider,
+  so avoid enabling it globally in an app which reads an unbounded number of distinct paths.
 - **`staleWhileInvalidated?`**: `boolean` -
   If `true`, then when an API response is considered invalidated
   (either because you manually invalidated it, or it's become too old),
   the stale (invalidated) response will continue to be returned by the `useApiRead` hook.
+  A response this hook read itself takes precedence over anything in the global cache.
 - **`staleWhileError?`**: `boolean` -
   If `true`, then when an API response returns an error,
   if there was a previous response returned by this hook,
@@ -158,7 +172,7 @@ The following properties tell you about the data returned:
   this can be used to display a relevant error message to the user.
 - **`stale`**: `boolean` -
   Will be set to `true` if the current `data` being returned is considered stale.
-- **`staleReason`**: `null | 'invalidated' | 'error'` -
+- **`staleReason`**: `null | 'mounted' | 'invalidated' | 'error'` -
   If a stale response is being returned (`stale: true`),
   indicates why.
 - **`receivedAt`**: `null | number` -

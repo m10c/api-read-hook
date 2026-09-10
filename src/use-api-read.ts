@@ -8,7 +8,7 @@ import {
 
 import { ApiReadContext } from './ApiReadContext';
 import { ReadConfig, ReadResult } from './types';
-import reducer, { ReaderReducer } from './core/reducer';
+import reducer, { initialState, ReaderReducer } from './core/reducer';
 import useConfig from './core/use-config';
 import usePrevious from './core/use-previous';
 import useReadMore from './core/use-read-more';
@@ -18,21 +18,42 @@ export default function useApiRead<T>(
   options: ReadConfig = {}
 ): ReadResult<T> {
   const context = useContext(ApiReadContext);
+  const {
+    hasProvider,
+    addMountedEntry,
+    removeMountedEntry,
+    getCached,
+    setCached,
+    clearCached,
+  } = context;
 
   const config = useConfig(options);
-  const { reader, invalidateAge } = config;
+  const { reader, invalidateAge, staleWhileMounted } = config;
 
-  const [state, dispatch] = useReducer<ReaderReducer<T>>(reducer, {
-    data: undefined,
-    error: undefined,
-    staleReason: null,
-    receivedAt: null,
-  });
+  const readCache = useCallback(
+    function readCache(cachePath: string | null) {
+      if (!staleWhileMounted || cachePath === null) return undefined;
+      return getCached(cachePath);
+    },
+    [getCached, staleWhileMounted]
+  );
+
+  const [state, dispatch] = useReducer<ReaderReducer<T>, null>(
+    reducer,
+    null,
+    () => initialState<T>(path, readCache(path))
+  );
 
   const [invalidateToken, setInvalidateToken] = useState(0);
-  const invalidate = useCallback(function invalidate() {
-    setInvalidateToken(Math.random());
-  }, []);
+  const invalidate = useCallback(
+    function invalidate() {
+      // Data known to be out of date must not survive in the cache to be
+      // served to a later mount.
+      if (path !== null) clearCached(path);
+      setInvalidateToken(Math.random());
+    },
+    [clearCached, path]
+  );
 
   const mutate = useCallback(
     function mutate(mutator: (data: T) => T) {
@@ -47,11 +68,18 @@ export default function useApiRead<T>(
   const [instanceKey] = useState(Math.random().toString());
   useEffect(() => {
     if (path === null) return;
-    context.addMountedEntry(instanceKey, path, invalidate, mutate);
+    addMountedEntry(instanceKey, path, invalidate, mutate);
     return () => {
-      context.removeMountedEntry(instanceKey);
+      removeMountedEntry(instanceKey);
     };
-  }, [context, instanceKey, path, invalidate, mutate]);
+  }, [
+    addMountedEntry,
+    removeMountedEntry,
+    instanceKey,
+    path,
+    invalidate,
+    mutate,
+  ]);
 
   // Effect: Perform the API request
   const previousPath = usePrevious(path);
@@ -60,7 +88,10 @@ export default function useApiRead<T>(
 
     async function readRequest() {
       const pathChanged = previousPath !== path;
-      dispatch({ type: 'READ_REQUEST', payload: { config, pathChanged } });
+      dispatch({
+        type: 'READ_REQUEST',
+        payload: { config, path, pathChanged, cached: readCache(path) },
+      });
 
       // Intentionally bail out, to allow user to e.g. wait on result from a
       // prior API request
@@ -81,6 +112,7 @@ export default function useApiRead<T>(
             payload: {
               config,
               data,
+              path,
               receivedAt: Math.floor(Date.now() / 1000),
             },
           });
@@ -89,7 +121,7 @@ export default function useApiRead<T>(
         if (!ignore) {
           dispatch({
             type: 'READ_FAILURE',
-            payload: { config, error: error as any },
+            payload: { config, error: error as Error },
           });
         }
       }
@@ -101,7 +133,24 @@ export default function useApiRead<T>(
     };
     // intentionally omitting previousPath
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path, reader, config, invalidateToken]);
+  }, [path, reader, config, invalidateToken, readCache]);
+
+  // Effect: Write successful reads back to the global cache
+  useEffect(() => {
+    if (!staleWhileMounted || path === null) return;
+    if (state.data === undefined || state.receivedAt === null) return;
+    // A path change re-renders before the request effect resets the state, so
+    // the previous path's data is briefly still present.
+    if (state.dataPath !== path) return;
+    setCached(path, state.data, state.receivedAt);
+  }, [
+    setCached,
+    staleWhileMounted,
+    path,
+    state.data,
+    state.dataPath,
+    state.receivedAt,
+  ]);
 
   // Effect: Manage invalidateAge timeout
   useEffect(() => {
@@ -112,6 +161,20 @@ export default function useApiRead<T>(
     }, invalidateAge * 1000);
     return () => clearTimeout(timeoutId);
   }, [invalidateAge, state.data, state.staleReason, invalidate]);
+
+  // Effect: Warn about a silently ineffective config
+  useEffect(() => {
+    if (
+      staleWhileMounted &&
+      !hasProvider &&
+      process.env.NODE_ENV !== 'production'
+    ) {
+      console.warn(
+        'api-read-hook: `staleWhileMounted` has no effect without an ' +
+          '<ApiReadProvider>, which owns the cache.'
+      );
+    }
+  }, [staleWhileMounted, hasProvider]);
 
   const { readMore, loadingMore, moreError } = useReadMore(reader, dispatch);
 

@@ -3,15 +3,14 @@ export type Reader = <T>(path: string) => Promise<T>;
 export type ReadConfig = {
   reader?: Reader;
 
-  // Meaningless until global cache
-  // staleWhileMounted?: boolean;
+  staleWhileMounted?: boolean;
   staleWhileInvalidated?: boolean;
   staleWhileError?: boolean;
 
   invalidateAge?: number;
 };
 
-export type StaleReason = /* 'mounted' | */ 'invalidated' | 'error';
+export type StaleReason = 'mounted' | 'invalidated' | 'error';
 
 export type ReadResult<T> = {
   data: T | undefined;

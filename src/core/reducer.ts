@@ -1,4 +1,4 @@
-import { ReadConfig, StaleReason } from '../types';
+import { CacheEntry, ReadConfig, StaleReason } from '../types';
 import { Reducer, Dispatch, ReducerAction } from 'react';
 
 type State<T> = {
@@ -11,7 +11,11 @@ type State<T> = {
 type Action<T> =
   | {
       type: 'READ_REQUEST';
-      payload: { config: ReadConfig; pathChanged: boolean };
+      payload: {
+        config: ReadConfig;
+        pathChanged: boolean;
+        cached?: CacheEntry;
+      };
     }
   | {
       type: 'READ_SUCCESS';
@@ -34,11 +38,28 @@ export default function reducer<T>(
         action.payload.config.staleWhileInvalidated &&
         !action.payload.pathChanged;
       const preservingStale = allowStale && state.data !== undefined;
+      if (preservingStale) {
+        return {
+          error: undefined,
+          data: state.data,
+          staleReason: 'invalidated',
+          receivedAt: state.receivedAt,
+        };
+      }
+      const { cached } = action.payload;
+      if (cached !== undefined) {
+        return {
+          error: undefined,
+          data: cached.data as T,
+          staleReason: 'mounted',
+          receivedAt: cached.receivedAt,
+        };
+      }
       return {
         error: undefined,
-        data: allowStale ? state.data : undefined,
-        staleReason: preservingStale ? 'invalidated' : null,
-        receivedAt: preservingStale ? state.receivedAt : null,
+        data: undefined,
+        staleReason: null,
+        receivedAt: null,
       };
     }
     case 'READ_SUCCESS':
@@ -49,12 +70,18 @@ export default function reducer<T>(
         receivedAt: action.payload.receivedAt,
       };
     case 'READ_FAILURE': {
-      const allowStale = action.payload.config.staleWhileError;
+      const allowStale =
+        action.payload.config.staleWhileError ||
+        state.staleReason === 'mounted';
       const preservingStale = allowStale && state.data !== undefined;
       return {
         error: action.payload.error,
-        data: allowStale ? state.data : undefined,
-        staleReason: preservingStale ? 'invalidated' : null,
+        data: preservingStale ? state.data : undefined,
+        staleReason: preservingStale
+          ? state.staleReason === 'mounted'
+            ? 'mounted'
+            : 'invalidated'
+          : null,
         receivedAt: preservingStale ? state.receivedAt : null,
       };
     }

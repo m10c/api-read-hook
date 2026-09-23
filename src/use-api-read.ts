@@ -18,9 +18,10 @@ export default function useApiRead<T>(
   options: ReadConfig = {}
 ): ReadResult<T> {
   const context = useContext(ApiReadContext);
+  const { loadCached, setCached, dropCached } = context;
 
   const config = useConfig(options);
-  const { reader, invalidateAge } = config;
+  const { reader, invalidateAge, staleWhileMounted } = config;
 
   const [state, dispatch] = useReducer<ReaderReducer<T>>(reducer, {
     data: undefined,
@@ -30,28 +31,42 @@ export default function useApiRead<T>(
   });
 
   const [invalidateToken, setInvalidateToken] = useState(0);
-  const invalidate = useCallback(function invalidate() {
+  const refetch = useCallback(function refetch() {
     setInvalidateToken(Math.random());
   }, []);
+  const invalidate = useCallback(
+    function invalidate() {
+      if (path !== null) dropCached(path);
+      refetch();
+    },
+    [path, dropCached, refetch]
+  );
 
-  const mutate = useCallback(
-    function mutate(mutator: (data: T) => T) {
+  const applyMutation = useCallback(
+    function applyMutation(mutator: (data: T) => T) {
       if (!state.data) return;
       const mutatedData = mutator(state.data);
       dispatch({ type: 'MUTATED_DATA', payload: { data: mutatedData } });
     },
     [state.data]
   );
+  const mutate = useCallback(
+    function mutate(mutator: (data: T) => T) {
+      applyMutation(mutator);
+      if (path !== null) dropCached(path);
+    },
+    [applyMutation, path, dropCached]
+  );
 
   // Effect: Add/remove this instance from the global cache enties
   const [instanceKey] = useState(Math.random().toString());
   useEffect(() => {
     if (path === null) return;
-    context.addMountedEntry(instanceKey, path, invalidate, mutate);
+    context.addMountedEntry(instanceKey, path, refetch, applyMutation);
     return () => {
       context.removeMountedEntry(instanceKey);
     };
-  }, [context, instanceKey, path, invalidate, mutate]);
+  }, [context, instanceKey, path, refetch, applyMutation]);
 
   // Effect: Perform the API request
   const previousPath = usePrevious(path);
@@ -60,7 +75,15 @@ export default function useApiRead<T>(
 
     async function readRequest() {
       const pathChanged = previousPath !== path;
-      dispatch({ type: 'READ_REQUEST', payload: { config, pathChanged } });
+      const cached =
+        staleWhileMounted && pathChanged && path !== null
+          ? await loadCached(path)
+          : undefined;
+      if (ignore) return;
+      dispatch({
+        type: 'READ_REQUEST',
+        payload: { config, pathChanged, cached },
+      });
 
       // Intentionally bail out, to allow user to e.g. wait on result from a
       // prior API request
@@ -76,13 +99,13 @@ export default function useApiRead<T>(
       try {
         const data = await reader<T>(path);
         if (!ignore) {
+          const receivedAt = Math.floor(Date.now() / 1000);
+          if (staleWhileMounted) {
+            setCached(path, data, receivedAt);
+          }
           dispatch({
             type: 'READ_SUCCESS',
-            payload: {
-              config,
-              data,
-              receivedAt: Math.floor(Date.now() / 1000),
-            },
+            payload: { config, data, receivedAt },
           });
         }
       } catch (error) {
@@ -101,7 +124,15 @@ export default function useApiRead<T>(
     };
     // intentionally omitting previousPath
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path, reader, config, invalidateToken]);
+  }, [
+    path,
+    reader,
+    config,
+    invalidateToken,
+    staleWhileMounted,
+    loadCached,
+    setCached,
+  ]);
 
   // Effect: Manage invalidateAge timeout
   useEffect(() => {

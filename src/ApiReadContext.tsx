@@ -1,6 +1,7 @@
 import * as React from 'react';
 
-import { ReadConfig } from './types';
+import { CacheEntry, PersistConfig, ReadConfig } from './types';
+import useCache from './core/use-cache';
 
 type Mutator = <T>(data: T) => T;
 type MountedEntries = {
@@ -24,6 +25,9 @@ export const ApiReadContext = React.createContext<{
   invalidateMatching: (search: string | RegExp) => void;
   mutateExact: (search: string, mutator: Mutator) => void;
   mutateMatching: (search: string | RegExp, mutator: Mutator) => void;
+  loadCached: (path: string) => Promise<CacheEntry | undefined>;
+  setCached: (path: string, data: unknown, receivedAt: number) => void;
+  dropCached: (path: string) => void;
 }>({
   config: {},
   addMountedEntry: () => {},
@@ -32,15 +36,23 @@ export const ApiReadContext = React.createContext<{
   invalidateMatching: () => {},
   mutateExact: () => {},
   mutateMatching: () => {},
+  loadCached: async () => undefined,
+  setCached: () => {},
+  dropCached: () => {},
 });
 
 type Props = {
   config: ReadConfig;
+  persistConfig?: PersistConfig;
   children: React.ReactNode;
 };
 
-export function ApiReadProvider({ config, children }: Props) {
+export function ApiReadProvider({ config, persistConfig, children }: Props) {
   const mountedEntriesRef = React.useRef<MountedEntries>({});
+
+  const { loadCached, setCached, dropCached, dropCachedMatching } = useCache(
+    persistConfig
+  );
 
   const addMountedEntry = React.useCallback(function addMountedEntry(
     key: string,
@@ -59,51 +71,53 @@ export function ApiReadProvider({ config, children }: Props) {
   },
   []);
 
-  const invalidateExact = React.useCallback(function invalidatExact(
-    search: string
-  ): void {
-    for (const entry of Object.values(mountedEntriesRef.current)) {
-      if (entry.path === search) {
-        entry.invalidate();
+  const invalidateExact = React.useCallback(
+    function invalidatExact(search: string): void {
+      dropCached(search);
+      for (const entry of Object.values(mountedEntriesRef.current)) {
+        if (entry.path === search) {
+          entry.invalidate();
+        }
       }
-    }
-  },
-  []);
+    },
+    [dropCached]
+  );
 
-  const invalidateMatching = React.useCallback(function invalidateMatching(
-    search: string | RegExp
-  ): void {
-    for (const entry of Object.values(mountedEntriesRef.current)) {
-      if (entry.path.match(search)) {
-        entry.invalidate();
+  const invalidateMatching = React.useCallback(
+    function invalidateMatching(search: string | RegExp): void {
+      dropCachedMatching(search);
+      for (const entry of Object.values(mountedEntriesRef.current)) {
+        if (entry.path.match(search)) {
+          entry.invalidate();
+        }
       }
-    }
-  },
-  []);
+    },
+    [dropCachedMatching]
+  );
 
-  const mutateExact = React.useCallback(function mutateExact(
-    search: string,
-    mutator: Mutator
-  ): void {
-    for (const entry of Object.values(mountedEntriesRef.current)) {
-      if (entry.path === search) {
-        entry.mutate(mutator);
+  const mutateExact = React.useCallback(
+    function mutateExact(search: string, mutator: Mutator): void {
+      dropCached(search);
+      for (const entry of Object.values(mountedEntriesRef.current)) {
+        if (entry.path === search) {
+          entry.mutate(mutator);
+        }
       }
-    }
-  },
-  []);
+    },
+    [dropCached]
+  );
 
-  const mutateMatching = React.useCallback(function mutateMatching(
-    search: string | RegExp,
-    mutator: Mutator
-  ): void {
-    for (const entry of Object.values(mountedEntriesRef.current)) {
-      if (entry.path.match(search)) {
-        entry.mutate(mutator);
+  const mutateMatching = React.useCallback(
+    function mutateMatching(search: string | RegExp, mutator: Mutator): void {
+      dropCachedMatching(search);
+      for (const entry of Object.values(mountedEntriesRef.current)) {
+        if (entry.path.match(search)) {
+          entry.mutate(mutator);
+        }
       }
-    }
-  },
-  []);
+    },
+    [dropCachedMatching]
+  );
 
   return (
     <ApiReadContext.Provider
@@ -115,6 +129,9 @@ export function ApiReadProvider({ config, children }: Props) {
         invalidateMatching,
         mutateExact,
         mutateMatching,
+        loadCached,
+        setCached,
+        dropCached,
       }}
     >
       {children}

@@ -2,16 +2,30 @@
 
 type Reader = <T>(path: string) => Promise<T>;
 
+export type PersistStorage = {
+  get: (key: string) => Promise<string | null>,
+  set: (key: string, value: string) => Promise<void>,
+  remove: (key: string) => Promise<void>,
+};
+
+export type PersistConfig = {
+  storage: PersistStorage,
+  version: string,
+  keyPrefix?: string,
+  maxAge?: number,
+};
+
 export type ReadConfig = {
   reader?: Reader,
 
+  staleWhileMounted?: boolean,
   staleWhileInvalidated?: boolean,
   staleWhileError?: boolean,
 
   invalidateAge?: number,
 };
 
-type StaleReason = 'invalidated' | 'error';
+type StaleReason = 'mounted' | 'invalidated' | 'error';
 
 export type ReadResult<T> = {
   data: T | void,
@@ -22,6 +36,7 @@ export type ReadResult<T> = {
   invalidate: () => void,
   invalidateExact: (search: string) => void,
   invalidateMatching: (search: string | RegExp) => void,
+  mutate: (mutator: (data: T) => T) => void,
   readMore: (path: string, updater: (moreData: T) => T) => void,
   loadingMore: boolean,
   moreError: Error | void,
@@ -29,6 +44,7 @@ export type ReadResult<T> = {
 
 declare export class ApiReadProvider extends React$Component<{
   config: ReadConfig,
+  persistConfig?: PersistConfig,
   children: React$Node,
 }> {}
 
@@ -40,4 +56,12 @@ declare export function useApiRead<T>(
 declare export function useInvalidation(): {
   invalidateExact: (search: string) => void,
   invalidateMatching: (search: string | RegExp) => void,
+};
+
+declare export function useMutation(): {
+  mutateExact: (search: string, mutator: <T>(data: T) => T) => void,
+  mutateMatching: (
+    search: string | RegExp,
+    mutator: <T>(data: T) => T
+  ) => void,
 };

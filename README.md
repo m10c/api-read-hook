@@ -18,8 +18,8 @@ Hook-based library for simple yet flexible data fetching and display in React ap
 - Supports chaining API multiple dependent API requests.
 - Opt-in fine-grained control of a response cache,
   with clear identification of stale responses and their age.
-- **TODO**: A global cache,
-  which can persist across screen unmounts.
+- Opt-in global cache across mounts,
+  optionally persisted across app launches.
 
 ## Installation
 
@@ -124,6 +124,11 @@ or in the top level `ApiReadProvider` `config` prop to set the defaults for all 
 
 - **`reader`**: `(path: string) => Promise<mixed>` -
   A reader function for your app's API, as described above.
+- **`staleWhileMounted?`**: `boolean` -
+  If `true`, then when a hook mounts,
+  the previous response for its path (from any hook under the `ApiReadProvider`)
+  will be returned while the fresh response is fetched
+  (and kept if that fetch fails, so check `data` before `error`).
 - **`staleWhileInvalidated?`**: `boolean` -
   If `true`, then when an API response is considered invalidated
   (either because you manually invalidated it, or it's become too old),
@@ -137,6 +142,39 @@ or in the top level `ApiReadProvider` `config` prop to set the defaults for all 
   and therefore re-fetched.
   This is useful to ensure the user is never looking at content which is too old,
   even if they've kept the same screen open for a long time.
+
+### Persisting the cache
+
+Pass a `persistConfig` to the `ApiReadProvider` to also write `staleWhileMounted` responses to storage.
+
+```tsx
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ApiReadProvider, PersistConfig } from 'api-read-hook';
+
+const persistConfig: PersistConfig = {
+  storage: {
+    get: (key) => AsyncStorage.getItem(key),
+    set: (key, value) => AsyncStorage.setItem(key, value),
+    remove: (key) => AsyncStorage.removeItem(key),
+  },
+  version: OTA_VERSION,
+  keyPrefix: `my-app.${APP_ENV}.`,
+  maxAge: 7 * 24 * 60 * 60,
+};
+
+<ApiReadProvider config={{ reader }} persistConfig={persistConfig}>
+```
+
+- **`storage`**: `PersistStorage` -
+  Async key/value storage with `get`, `set` and `remove`.
+- **`version`**: `string` -
+  Stored responses from a different version are discarded,
+  so use the version of the JS bundle (e.g. the OTA update ID).
+- **`keyPrefix?`**: `string` -
+  Prefix for storage keys (default `api-read-hook.`).
+  Include the environment to keep e.g. staging and production responses separate.
+- **`maxAge?`**: `number` -
+  Number of seconds after which a cached response is discarded rather than returned.
 
 ### Read result
 
@@ -158,7 +196,7 @@ The following properties tell you about the data returned:
   this can be used to display a relevant error message to the user.
 - **`stale`**: `boolean` -
   Will be set to `true` if the current `data` being returned is considered stale.
-- **`staleReason`**: `null | 'invalidated' | 'error'` -
+- **`staleReason`**: `null | 'mounted' | 'invalidated' | 'error'` -
   If a stale response is being returned (`stale: true`),
   indicates why.
 - **`receivedAt`**: `null | number` -
@@ -197,6 +235,7 @@ the `useInvalidation` hook can be used to retrieve helper functions for invalida
   and invalidates those where:
   - `search` is a `string`: `path` **contains** `search`.
   - `search` is a `RegExp`: `path` matches the `search` regexp.
+
 ### `useMutation` hook
 
 Works in a similar way to `useInvalidation`, but for mutation:

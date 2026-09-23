@@ -1,17 +1,34 @@
 export type Reader = <T>(path: string) => Promise<T>;
 
+export type PersistStorage = {
+  get: (key: string) => Promise<string | null>;
+  set: (key: string, value: string) => Promise<void>;
+  remove: (key: string) => Promise<void>;
+};
+
+export type PersistConfig = {
+  storage: PersistStorage;
+  version: string;
+  keyPrefix?: string;
+  maxAge?: number;
+};
+
 export type ReadConfig = {
   reader?: Reader;
 
-  // Meaningless until global cache
-  // staleWhileMounted?: boolean;
+  staleWhileMounted?: boolean;
   staleWhileInvalidated?: boolean;
   staleWhileError?: boolean;
 
   invalidateAge?: number;
 };
 
-export type StaleReason = /* 'mounted' | */ 'invalidated' | 'error';
+export type StaleReason = 'mounted' | 'invalidated' | 'error';
+
+export type CacheEntry = {
+  data: unknown;
+  receivedAt: number;
+};
 
 export type ReadResult<T> = {
   data: T | undefined;

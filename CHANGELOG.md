@@ -1,3 +1,8 @@
+## 0.1.3
+
+- Add `staleWhileMounted` option
+- Add `persistConfig` prop to `ApiReadProvider`
+
 ## 0.1.2
 
 - Add `useMutation` hook.

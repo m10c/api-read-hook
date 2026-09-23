@@ -58,16 +58,24 @@ export default function useCache(persistConfig: PersistConfig | undefined) {
     persist.storage.remove(storageKey(persist, path)).catch(() => {});
   }, []);
 
-  const loadCached = useCallback(
-    async function loadCached(path: string): Promise<CacheEntry | undefined> {
+  const getCached = useCallback(
+    function getCached(path: string): CacheEntry | undefined {
       const persist = persistRef.current;
       const inMemory = cacheRef.current.get(path);
-      if (inMemory !== undefined) {
-        if (!persist || isFresh(persist, inMemory)) return inMemory;
-        dropCached(path);
-        return undefined;
-      }
+      if (inMemory === undefined) return undefined;
+      if (!persist || isFresh(persist, inMemory)) return inMemory;
+      dropCached(path);
+      return undefined;
+    },
+    [dropCached]
+  );
 
+  const loadCached = useCallback(
+    async function loadCached(path: string): Promise<CacheEntry | undefined> {
+      const inMemory = getCached(path);
+      if (inMemory !== undefined) return inMemory;
+
+      const persist = persistRef.current;
       if (!persist) return undefined;
       let stored: string | null;
       try {
@@ -85,7 +93,7 @@ export default function useCache(persistConfig: PersistConfig | undefined) {
       cacheRef.current.set(path, entry);
       return entry;
     },
-    [dropCached]
+    [getCached, dropCached]
   );
 
   const setCached = useCallback(function setCached(
@@ -119,5 +127,5 @@ export default function useCache(persistConfig: PersistConfig | undefined) {
     [dropCached]
   );
 
-  return { loadCached, setCached, dropCached, dropCachedMatching };
+  return { getCached, loadCached, setCached, dropCached, dropCachedMatching };
 }

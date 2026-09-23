@@ -18,17 +18,33 @@ export default function useApiRead<T>(
   options: ReadConfig = {}
 ): ReadResult<T> {
   const context = useContext(ApiReadContext);
-  const { loadCached, setCached, dropCached } = context;
+  const { getCached, loadCached, setCached, dropCached } = context;
 
   const config = useConfig(options);
   const { reader, invalidateAge, staleWhileMounted } = config;
 
-  const [state, dispatch] = useReducer<ReaderReducer<T>>(reducer, {
-    data: undefined,
-    error: undefined,
-    staleReason: null,
-    receivedAt: null,
-  });
+  const [state, dispatch] = useReducer<ReaderReducer<T>, null>(
+    reducer,
+    null,
+    function initialState() {
+      const cached =
+        staleWhileMounted && path !== null ? getCached(path) : undefined;
+      if (cached === undefined) {
+        return {
+          data: undefined,
+          error: undefined,
+          staleReason: null,
+          receivedAt: null,
+        };
+      }
+      return {
+        data: cached.data as T,
+        error: undefined,
+        staleReason: 'mounted',
+        receivedAt: cached.receivedAt,
+      };
+    }
+  );
 
   const [invalidateToken, setInvalidateToken] = useState(0);
   const refetch = useCallback(function refetch() {

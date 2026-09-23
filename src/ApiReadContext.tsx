@@ -25,6 +25,7 @@ export const ApiReadContext = React.createContext<{
   invalidateMatching: (search: string | RegExp) => void;
   mutateExact: (search: string, mutator: Mutator) => void;
   mutateMatching: (search: string | RegExp, mutator: Mutator) => void;
+  getCached: (path: string) => CacheEntry | undefined;
   loadCached: (path: string) => Promise<CacheEntry | undefined>;
   setCached: (path: string, data: unknown, receivedAt: number) => void;
   dropCached: (path: string) => void;
@@ -36,6 +37,7 @@ export const ApiReadContext = React.createContext<{
   invalidateMatching: () => {},
   mutateExact: () => {},
   mutateMatching: () => {},
+  getCached: () => undefined,
   loadCached: async () => undefined,
   setCached: () => {},
   dropCached: () => {},
@@ -50,9 +52,13 @@ type Props = {
 export function ApiReadProvider({ config, persistConfig, children }: Props) {
   const mountedEntriesRef = React.useRef<MountedEntries>({});
 
-  const { loadCached, setCached, dropCached, dropCachedMatching } = useCache(
-    persistConfig
-  );
+  const {
+    getCached,
+    loadCached,
+    setCached,
+    dropCached,
+    dropCachedMatching,
+  } = useCache(persistConfig);
 
   const addMountedEntry = React.useCallback(function addMountedEntry(
     key: string,
@@ -129,6 +135,7 @@ export function ApiReadProvider({ config, persistConfig, children }: Props) {
         invalidateMatching,
         mutateExact,
         mutateMatching,
+        getCached,
         loadCached,
         setCached,
         dropCached,

@@ -128,6 +128,13 @@ or in the top level `ApiReadProvider` `config` prop to set the defaults for all 
   If `true`, then when an API response is considered invalidated
   (either because you manually invalidated it, or it's become too old),
   the stale (invalidated) response will continue to be returned by the `useApiRead` hook.
+- **`keepPreviousData?`**: `boolean` -
+  If `true`, then when the `path` changes,
+  the response for the previous path will continue to be returned by the `useApiRead` hook
+  until the new path's response arrives.
+  Useful for e.g. reading more items by increasing a page size in the path,
+  without the existing items disappearing in the meantime.
+  Changing the `path` to `null` still clears the data.
 - **`staleWhileError?`**: `boolean` -
   If `true`, then when an API response returns an error,
   if there was a previous response returned by this hook,
@@ -158,7 +165,7 @@ The following properties tell you about the data returned:
   this can be used to display a relevant error message to the user.
 - **`stale`**: `boolean` -
   Will be set to `true` if the current `data` being returned is considered stale.
-- **`staleReason`**: `null | 'invalidated' | 'error'` -
+- **`staleReason`**: `null | 'invalidated' | 'error' | 'pathChanged'` -
   If a stale response is being returned (`stale: true`),
   indicates why.
 - **`receivedAt`**: `null | number` -
@@ -197,6 +204,7 @@ the `useInvalidation` hook can be used to retrieve helper functions for invalida
   and invalidates those where:
   - `search` is a `string`: `path` **contains** `search`.
   - `search` is a `RegExp`: `path` matches the `search` regexp.
+
 ### `useMutation` hook
 
 Works in a similar way to `useInvalidation`, but for mutation:

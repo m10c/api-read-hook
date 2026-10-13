@@ -11,7 +11,11 @@ type State<T> = {
 type Action<T> =
   | {
       type: 'READ_REQUEST';
-      payload: { config: ReadConfig; pathChanged: boolean };
+      payload: {
+        config: ReadConfig;
+        pathChanged: boolean;
+        pathIsNull: boolean;
+      };
     }
   | {
       type: 'READ_SUCCESS';
@@ -30,14 +34,20 @@ export default function reducer<T>(
 ): State<T> {
   switch (action.type) {
     case 'READ_REQUEST': {
-      const allowStale =
-        action.payload.config.staleWhileInvalidated &&
-        !action.payload.pathChanged;
-      const preservingStale = allowStale && state.data !== undefined;
+      const { config, pathChanged, pathIsNull } = action.payload;
+      let staleReason: StaleReason | null = null;
+      if (!pathChanged && config.staleWhileInvalidated) {
+        staleReason = 'invalidated';
+      }
+      // A null path means the caller has nothing to read, so nothing to keep
+      if (pathChanged && config.keepPreviousData && !pathIsNull) {
+        staleReason = 'pathChanged';
+      }
+      const preservingStale = staleReason !== null && state.data !== undefined;
       return {
         error: undefined,
-        data: allowStale ? state.data : undefined,
-        staleReason: preservingStale ? 'invalidated' : null,
+        data: preservingStale ? state.data : undefined,
+        staleReason: preservingStale ? staleReason : null,
         receivedAt: preservingStale ? state.receivedAt : null,
       };
     }

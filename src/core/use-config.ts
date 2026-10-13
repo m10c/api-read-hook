@@ -16,16 +16,20 @@ export default function useConfig(options: ReadConfig = {}): ReadConfig {
       staleWhileInvalidated:
         options.staleWhileInvalidated ?? context.config.staleWhileInvalidated,
       invalidateAge: options.invalidateAge ?? context.config.invalidateAge,
+      keepPreviousData:
+        options.keepPreviousData ?? context.config.keepPreviousData,
     }),
     [
       context.config.reader,
       context.config.staleWhileError,
       context.config.staleWhileInvalidated,
       context.config.invalidateAge,
+      context.config.keepPreviousData,
       options.reader,
       options.staleWhileError,
       options.staleWhileInvalidated,
       options.invalidateAge,
+      options.keepPreviousData,
     ]
   );
   return config;

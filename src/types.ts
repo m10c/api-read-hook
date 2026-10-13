@@ -7,11 +7,15 @@ export type ReadConfig = {
   // staleWhileMounted?: boolean;
   staleWhileInvalidated?: boolean;
   staleWhileError?: boolean;
+  keepPreviousData?: boolean;
 
   invalidateAge?: number;
 };
 
-export type StaleReason = /* 'mounted' | */ 'invalidated' | 'error';
+export type StaleReason =
+  | /* 'mounted' | */ 'invalidated'
+  | 'error'
+  | 'pathChanged';
 
 export type ReadResult<T> = {
   data: T | undefined;

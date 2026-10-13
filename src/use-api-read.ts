@@ -60,7 +60,10 @@ export default function useApiRead<T>(
 
     async function readRequest() {
       const pathChanged = previousPath !== path;
-      dispatch({ type: 'READ_REQUEST', payload: { config, pathChanged } });
+      dispatch({
+        type: 'READ_REQUEST',
+        payload: { config, pathChanged, pathIsNull: path === null },
+      });
 
       // Intentionally bail out, to allow user to e.g. wait on result from a
       // prior API request

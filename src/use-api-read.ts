@@ -105,7 +105,9 @@ export default function useApiRead<T>(
 
   // Effect: Manage invalidateAge timeout
   useEffect(() => {
-    if (!invalidateAge || !state.data || state.staleReason) return;
+    if (!invalidateAge || !state.data || state.staleReason === 'invalidated') {
+      return;
+    }
 
     const timeoutId = setTimeout(() => {
       invalidate();

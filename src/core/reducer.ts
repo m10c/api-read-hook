@@ -54,7 +54,7 @@ export default function reducer<T>(
       return {
         error: action.payload.error,
         data: allowStale ? state.data : undefined,
-        staleReason: preservingStale ? 'invalidated' : null,
+        staleReason: preservingStale ? 'error' : null,
         receivedAt: preservingStale ? state.receivedAt : null,
       };
     }
